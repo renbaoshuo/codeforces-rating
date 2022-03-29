@@ -1,0 +1,12 @@
+{
+  "name": "codeforces-rating",
+  "author": "Baoshuo <i@baoshuo.ren>",
+  "license": "MIT",
+  "dependencies": {
+    "@vercel/node": "^1.14.0",
+    "node-fetch": "2"
+  },
+  "devDependencies": {
+    "typescript": "^4.6.3"
+  }
+}
