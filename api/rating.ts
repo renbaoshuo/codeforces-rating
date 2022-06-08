@@ -27,7 +27,7 @@ export default (request: VercelRequest, response: VercelResponse) => {
             const escapedUsername = (username as string).replace(/-/g, '--').replace(/_/g, '__');
 
             fetch(
-                `https://img.shields.io/badge/${escapedUsername}-${rank}  ${rating}-${color}.svg?longCache=true&style=for-the-badge&link=https://codeforces.com/profile/${username}&logo=codeforces`
+                `https://img.shields.io/badge/${escapedUsername}-${rank && rating ? `${rank}  ${rating}` : 'Unrated'}-${color}.svg?longCache=true&style=for-the-badge&link=https://codeforces.com/profile/${username}&logo=codeforces`
             )
                 .then((res) => {
                     if (!res.ok) throw '';
