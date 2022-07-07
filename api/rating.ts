@@ -1,6 +1,15 @@
 import fetch from 'node-fetch';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
+interface UserRatingInfo {
+    rating: number;
+    text: string;
+}
+
+function escape(username: string) {
+    return encodeURIComponent(username.replace(/-/g, '--').replace(/_/g, '__'));
+}
+
 function getRatingColor(rating: number) {
     if (rating >= 2400) return 'ff0000';
     if (rating >= 2100) return 'ff8c00';
@@ -11,36 +20,50 @@ function getRatingColor(rating: number) {
     return '808080';
 }
 
-export default (request: VercelRequest, response: VercelResponse) => {
-    const { username } = request.query;
+async function fetchData(username: string): Promise<UserRatingInfo> {
+    const res = await fetch(`https://codeforces.com/api/user.info?handles=${username}`);
 
-    fetch(`https://codeforces.com/api/user.info?handles=${username}`)
-        .then((res) => {
-            if (!res.ok) throw '';
-            return res.json();
+    if (!res.ok) return { rating: 0, text: 'N/A' };
+
+    const data = await res.json();
+    const { rank, rating } = data.result[0];
+    const text = rank && rating ? `${rank}  ${rating}` : 'Unrated';
+
+    return { rating, text };
+}
+
+async function getBadgeImage(username: string, data: UserRatingInfo, style: string) {
+    const color = getRatingColor(data.rating);
+    const escapedUsername = escape(username);
+    const escapedRatingText = escape(data.text);
+
+    const params = new URLSearchParams({
+        longCache: 'true',
+        style,
+        logo: 'codeforces',
+        link: `https://codeforces.com/profile/${username}`,
+    });
+
+    const res = await fetch(
+        `https://img.shields.io/badge/${escapedUsername}-${escapedRatingText}-${color}.svg?${params.toString()}`
+    );
+
+    if (!res.ok) throw 'error';
+    return await res.text();
+}
+
+export default async (request: VercelRequest, response: VercelResponse) => {
+    let { username = 'baoshuo', style = 'for-the-badge' } = request.query;
+
+    if (Array.isArray(username)) username = username[0];
+    if (Array.isArray(style)) style = style[0];
+
+    const data = await fetchData(username as string).catch(() => ({ rating: 0, text: 'N/A' }));
+    getBadgeImage(username as string, data, style as string)
+        .then((data) => {
+            response.status(200).setHeader('Content-Type', 'image/svg+xml;charset=utf-8').send(data);
         })
-        .then((res) => {
-            if (!res.result.length) throw '';
-
-            const { rank, rating } = res.result[0];
-            const color = getRatingColor(rating);
-            const escapedUsername = (username as string).replace(/-/g, '--').replace(/_/g, '__');
-
-            fetch(
-                `https://img.shields.io/badge/${escapedUsername}-${rank && rating ? `${rank}  ${rating}` : 'Unrated'}-${color}.svg?longCache=true&style=for-the-badge&link=https://codeforces.com/profile/${username}&logo=codeforces`
-            )
-                .then((res) => {
-                    if (!res.ok) throw '';
-                    return res.text();
-                })
-                .then((res) => {
-                    response.status(200).setHeader('Content-Type', 'image/svg+xml;charset=utf-8').send(res);
-                })
-                .catch((err) => {
-                    response.status(500).send('Error!\n' + err);
-                });
-        })
-        .catch((err) => {
-            response.status(500).send('Error!\n' + err);
+        .catch(() => {
+            response.status(500).send('error');
         });
 };
