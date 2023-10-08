@@ -8,7 +8,7 @@
             "src": "/",
             "status": 302,
             "headers": {
-                "Location": "https://github.com/renbaoshuo/codeforces-rating"
+                "Location": "https://baoshuo.ren/services/codeforces-rating-badge/"
             }
         }
     ]
